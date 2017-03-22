@@ -1,6 +1,8 @@
-lst = [12,34,200,255]
+//Joy - Extendible
 
-strfile = r'/home/rootshell/Documents/test.txt'
+lst = [12,34,200,254]
+
+strfile = 'C://test.txt'
 buffer = bytes(lst)
 
 print(buffer)
