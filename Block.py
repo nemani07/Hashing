@@ -25,3 +25,18 @@ class Block:
 	def getPointer(self):
 		# this is having an issue beacause we haven't actually written data to that part of the block yet... so it's just going out into memory and grabbing some random shit. pointer at the front of block instead? doable, but not as sexy. when writing a new block set all to null? possible. may need to just set pointer to null. the rest will fill in.
 		return int.from_bytes(self.data[(-1*self.pointerSize):], byteorder='big')
+	
+	def isEmpty(self):
+		for recNum in range(0, self.bfr):
+			aRecord = self.makeRecord(self.data[recNum*self.recordSize:(recNum+1)*self.recordSize])
+			if not aRecord.isEmpty():
+				return False
+		return True
+		
+	def getAllRecords(self):
+		records = []
+		for recNum in range(0, self.bfr):
+			aRecord = self.makeRecord(self.data[recNum*self.recordSize:(recNum+1)*self.recordSize])
+			if not aRecord.isEmpty():
+				records.append(aRecord)
+		return records

@@ -17,3 +17,6 @@ class Record:
 		
 	def isEmpty(self):
 		return not self.getHashValue()
+		
+	def getData(self):
+		return self.bytes[self.fieldSize:]
