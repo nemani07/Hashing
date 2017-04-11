@@ -86,25 +86,35 @@ class LinearlyHashedFile:
 						i = 0
 						bucketFound = False
 						while bucketFound == False:
+							# navigate to ith bucket in overflow file
 							overflow.seek(i*self.blockSize)
-							aBlock = makeBlock(overflow.read(self.blockSize))
+							# load bucket into memory
+							aBlock = self.makeBlock(overflow.read(self.blockSize))
 							if aBlock.isEmpty():
+								# found an empty bucket, end looping
 								bucketFound = True
 							else:
+								# bucket wasn't empty, check the next one
 								i += 1
+						# navigate to empty bucket
 						overflow.seek(self.blockSize*i)
+						# write the record there
 						overflow.write(formattedRecord.bytes)
-					
+						# navigate to block in orig file
+						f.seek(self.blockSize*(bucket+3) - self.blockPointerSize)
+						# update pointer value
+						f.write(i.to_bytes(self.blockPointerSize, byteorder='big'))
 				
 				# navigate to the bucket to be split
 				f.seek(self.blockSize*(self.n+2))
 				# load bucket to memory
-				bucketToBeSplit = makeBlock(f.read(self.blockSize))
+				bucketToBeSplit = self.makeBlock(f.read(self.blockSize))
 				# clear out bucket
 				f.seek(self.blockSize*(self.n+2))
 				f.write(bytearray(self.blockSize))
 				BTBSpointer = bucketToBeSplit.getPointer() - 1
 				# see if it is pointing to anything
+				allRecords = []
 				if BTBSpointer >= 0:
 					# this method will only handle one overflow bucket per bucket in the original file
 					# eventually I should probably use some sort of list of overflow buckets.
@@ -116,17 +126,31 @@ class LinearlyHashedFile:
 						# clear the heck out of that bucket
 						overflow.seek(self.blockSize*BTBSpointer)
 						overflow.write(bytearray(self.blockSize))
-				allRecords = bucketToBeSplit.getAllRecords().append(ofBucketToBeSplit.getAllRecords())
+						allRecords.extend(ofBucketToBeSplit.getAllRecords())
+				allRecords.extend(bucketToBeSplit.getAllRecords())
 				# loop through all records
-				oldBucketCount = 0
-				newBucketCount = 0
+				origBucketCount = 0
+				grabbedBucketCount = 0
 				for record in allRecords:
+					# use second hash function to deterimine which bucket
 					whichBucket = self.h2(record.getHashValue())
-					f.seek(self.blockSize*(newBucket+2))
-				
-				
+					if whichBucket == self.n:
+						origBucketCount += 1
+						if origBucketCount > self.bfr:
+							print("there's been a split within a split")
+						else:
+							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*origBucketCount)
+							f.write(record.bytes)
+					else:
+						grabbedBucketCount += 1
+						if grabbedBucketCount > self.bfr:
+							print("there's been a split within a split")
+						else:
+							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*grabbedBucketCount)
+							f.write(record.bytes)
+							
 	def makeBlock(self, data):
 		return Block(self.blockSize, self.blockPointerSize, self.recordSize, self.fieldSize, self.bfr, data)
 	
 	def rehashRecord(self):
-		
+		print('help')
