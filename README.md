@@ -1,2 +1,2 @@
 # Hashing
-Implementation of various hashing algorithms
+Implementation of linear hashing algorithm
