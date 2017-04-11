@@ -18,9 +18,9 @@ class LinearlyHashedFile:
 		self.bfr = math.floor((blockSize-self.blockPointerSize)/self.recordSize)
 		# truncates the file
 		with open(self.file, 'wb') as f:
-			f.write(b"This is a shorter less ridicculous file header")
-			f.seek(self.blockSize*3 - self.blockPointerSize)
-			f.write((0).to_bytes(fieldSize, byteorder='big'))
+			f.write(b"This is a shorter less ridiculous file header")
+			f.seek(self.blockSize*2)
+			f.write(bytearray(self.blockSize))
 		# create overflow file
 		open(self.overflow, 'wb').close()
 	
@@ -58,7 +58,7 @@ class LinearlyHashedFile:
 				
 				# here is where we need to put the data into an overflow bucket
 				with open(self.overflow, 'r+b') as overflow:
-					print(theBlock.getPointer())
+					#print("Pointer: " + str(theBlock.getPointer()))
 					# need to ignore the 0 pointer because that'll be null pointer
 					# but we don't want to waste the first block in overflow
 					# so we could subtract one? or maybe use first block for info
@@ -103,7 +103,8 @@ class LinearlyHashedFile:
 						# navigate to block in orig file
 						f.seek(self.blockSize*(bucket+3) - self.blockPointerSize)
 						# update pointer value
-						f.write(i.to_bytes(self.blockPointerSize, byteorder='big'))
+						# add one because we're using 1 based indexing
+						f.write((i+1).to_bytes(self.blockPointerSize, byteorder='big'))
 				
 				# navigate to the bucket to be split
 				f.seek(self.blockSize*(self.n+2))
@@ -122,7 +123,7 @@ class LinearlyHashedFile:
 						# navigate to bucket of interest
 						overflow.seek(self.blockSize*BTBSpointer)
 						# read bucket into memory
-						ofBucketToBeSplit = makeBlock(overflow.read(self.blockSize))
+						ofBucketToBeSplit = self.makeBlock(overflow.read(self.blockSize))
 						# clear the heck out of that bucket
 						overflow.seek(self.blockSize*BTBSpointer)
 						overflow.write(bytearray(self.blockSize))
@@ -137,18 +138,32 @@ class LinearlyHashedFile:
 					if whichBucket == self.n:
 						origBucketCount += 1
 						if origBucketCount > self.bfr:
-							print("there's been a split within a split")
+							print("there's needs to be a split within a split")
 						else:
 							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*origBucketCount)
 							f.write(record.bytes)
 					else:
 						grabbedBucketCount += 1
 						if grabbedBucketCount > self.bfr:
-							print("there's been a split within a split")
+							print("there's needs to be a split within a split")
 						else:
 							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*grabbedBucketCount)
 							f.write(record.bytes)
-							
+				# at this point we have rehashed all records and put them in their appropriate buckets
+				# now we need to update n and m and hash functions
+				
+				# increment n
+				self.n += 1
+				# if n==m we need to reset
+				if self.n == self.m:
+					# reset n to zero
+					self.n = 0
+					# set m to twice m
+					# this should update the hash functions as well
+					# as they are based off of m
+					self.m = 2*self.m
+					
+					
 	def makeBlock(self, data):
 		return Block(self.blockSize, self.blockPointerSize, self.recordSize, self.fieldSize, self.bfr, data)
 	

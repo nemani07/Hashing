@@ -4,7 +4,7 @@ class Record:
 		self.size = size
 		self.fieldSize = fieldSize
 		self.bytes = bytes
-		print(bytes)
+		#print(bytes)
 	
 	@classmethod
 	def new(cls, size, fieldSize, value, record):
@@ -12,7 +12,7 @@ class Record:
 		return cls(size, fieldSize, bytes)
 	
 	def getHashValue(self):
-		print("Hash key: " + str(int.from_bytes(self.bytes[0:self.fieldSize], byteorder='big')))
+		#print("Hash key: " + str(int.from_bytes(self.bytes[0:self.fieldSize], byteorder='big')))
 		return int.from_bytes(self.bytes[0:self.fieldSize], byteorder='big')
 		
 	def isEmpty(self):

@@ -15,7 +15,7 @@ class Block:
 		for recNum in range(0, self.bfr):
 			aRecord = self.makeRecord(self.data[recNum*self.recordSize:(recNum+1)*self.recordSize])
 			if aRecord.isEmpty():
-				print("New Rec num:" + str(recNum))
+				#print("New Rec num:" + str(recNum))
 				return recNum
 		return -1
 	
