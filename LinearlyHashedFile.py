@@ -165,9 +165,53 @@ class LinearlyHashedFile:
 					# as they are based off of m
 					self.m = 2*self.m
 					
-					
+	def search(self, value):
+		# pass value to first hash function
+		bucket = self.h1(value)
+		# check to see if the secondary hash function needs to be used
+		if bucket < self.n:
+			bucket = self.h2(value)
+		# open the file as binary read and write
+		with open(self.file, 'rb', buffering=self.blockSize) as f:
+			# navigate to the appropriate bucket
+			# plus 2 is to account for the header
+			f.seek(self.blockSize*(bucket+2))
+			# load bucket into memory
+			theBlock = self.makeBlock(f.read(self.blockSize))
+			# currently only built to handle key values
+			if theBlock.containsRecordWithValue(value):
+				theRecord = theBlock.getRecordWithValue(value)
+				print(theRecord.bytes)
+			else:
+				pointer = theBlock.getPointer() - 1
+				with open(self.overflow, 'rb' buffering=self.blockSize) as overflow:
+					overflow.seek(self.blockSize*pointer)
+					self.makeBlock(overflow.read(self.blockSize))
+			# just print it? record should probably have some sort of pretty print function
+			print(theRecord.bytes)
+		
+	def update(self, value, data):
+		# pass value to first hash function
+		bucket = self.h1(value)
+		# check to see if the secondary hash function needs to be used
+		if bucket < self.n:
+			bucket = self.h2(value)
+		# format the record to overwrite with
+		formattedRecord = Record.new(self.recordSize, self.fieldSize, value, data)
+		# open the file as binary read and write
+		with open(self.file, 'r+b', buffering=self.blockSize) as f:
+			# navigate to the appropriate bucket
+			# plus 2 is to account for the header
+			f.seek(self.blockSize*(bucket+2))
+			# load bucket into memory
+			theBlock = self.makeBlock(f.read(self.blockSize))
+			# currently only built to handle key values
+			recLoc = theBlock.getRecordWithValueLoc(value)
+			# navigate to the record to be updated
+			f.seek(self.blockSize*(bucket+2) + self.recordSize*recLoc)
+			# write over the old record with new formatted one
+			f.write(formattedRecord.bytes)
+			
+	
 	def makeBlock(self, data):
 		return Block(self.blockSize, self.blockPointerSize, self.recordSize, self.fieldSize, self.bfr, data)
-	
-	def rehashRecord(self):
-		print('help')

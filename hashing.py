@@ -8,6 +8,11 @@ for i in range(50, 90):
 	file.insert(i, str(i) + "th record")
 
 
+for i in range(60, 70):
+	file.update(i, str(i) + "th UPDATED record")
+	
+file.update(88, "i'm sure this wont break")
+
 
 # lst = [12,34,200,255]
 

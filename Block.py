@@ -19,11 +19,13 @@ class Block:
 				return recNum
 		return -1
 	
+	# only to be used inside this class
+	# makes creating records easier and more clear
 	def makeRecord(self, data):
 		return Record(self.recordSize, self.fieldSize, data)
 		
+	# return pointer value
 	def getPointer(self):
-		# this is having an issue beacause we haven't actually written data to that part of the block yet... so it's just going out into memory and grabbing some random shit. pointer at the front of block instead? doable, but not as sexy. when writing a new block set all to null? possible. may need to just set pointer to null. the rest will fill in.
 		return int.from_bytes(self.data[(-1*self.pointerSize):], byteorder='big')
 	
 	def isEmpty(self):
@@ -32,7 +34,8 @@ class Block:
 			if not aRecord.isEmpty():
 				return False
 		return True
-		
+	
+	# returns an array of record objects
 	def getAllRecords(self):
 		records = []
 		for recNum in range(0, self.bfr):
@@ -40,3 +43,25 @@ class Block:
 			if not aRecord.isEmpty():
 				records.append(aRecord)
 		return records
+	
+	def getRecordWithValue(self, value):
+		records = self.getAllRecords()
+		for record in records:
+			if record.getHashValue() == value:
+				return record
+	
+	def getRecordWithValueLoc(self, value):
+		records = self.getAllRecords()
+		i = 0
+		for record in records:
+			if record.getHashValue() == value:
+				return i
+			else:
+				i += 1
+	
+	def containsRecordWithValue(self, value):
+		records = self.getAllRecords()
+		for record in records:
+			if record.getHashValue() == value:
+				return True
+		return False
