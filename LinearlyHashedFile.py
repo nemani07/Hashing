@@ -54,7 +54,7 @@ class LinearlyHashedFile:
 				
 			else:
 				# there has been a collision. handle it.
-				print("need a split yoooooo")
+				print("need a split yoooooo.  " +  str(formattedRecord.getHashValue()) + " did it.")
 				
 				# here is where we need to put the data into an overflow bucket
 				with open(self.overflow, 'r+b') as overflow:
@@ -110,7 +110,7 @@ class LinearlyHashedFile:
 				f.seek(self.blockSize*(self.n+2))
 				# load bucket to memory
 				bucketToBeSplit = self.makeBlock(f.read(self.blockSize))
-				# clear out bucket
+				# clear out bucket on disk
 				f.seek(self.blockSize*(self.n+2))
 				f.write(bytearray(self.blockSize))
 				BTBSpointer = bucketToBeSplit.getPointer() - 1
@@ -140,14 +140,16 @@ class LinearlyHashedFile:
 						if origBucketCount > self.bfr:
 							print("there's needs to be a split within a split")
 						else:
-							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*origBucketCount)
+							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*(origBucketCount - 1))
 							f.write(record.bytes)
 					else:
+						print("we in the new bucket dawg")
+						print(record.getData())
 						grabbedBucketCount += 1
 						if grabbedBucketCount > self.bfr:
 							print("there's needs to be a split within a split")
 						else:
-							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*grabbedBucketCount)
+							f.seek(self.blockSize*(whichBucket+2) + self.recordSize*(grabbedBucketCount - 1))
 							f.write(record.bytes)
 				# at this point we have rehashed all records and put them in their appropriate buckets
 				# now we need to update n and m and hash functions
