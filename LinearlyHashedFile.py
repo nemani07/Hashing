@@ -180,13 +180,24 @@ class LinearlyHashedFile:
 			theBlock = self.makeBlock(f.read(self.blockSize))
 			# currently only built to handle key values
 			if theBlock.containsRecordWithValue(value):
+				# load the record
 				theRecord = theBlock.getRecordWithValue(value)
-				print(theRecord.bytes)
 			else:
+				# record was not in main file
+				# get pointer to overflow bucket
 				pointer = theBlock.getPointer() - 1
-				with open(self.overflow, 'rb' buffering=self.blockSize) as overflow:
-					overflow.seek(self.blockSize*pointer)
-					self.makeBlock(overflow.read(self.blockSize))
+				if pointer >= 0:
+					# there is an overflow block to check
+					with open(self.overflow, 'rb', buffering=self.blockSize) as overflow:
+						overflow.seek(self.blockSize*pointer)
+						ofBlock = self.makeBlock(overflow.read(self.blockSize))
+						if ofBlock.containsRecordWithValue(value):
+							theRecord = ofBlock.getRecordWithValue(value)
+						else:
+							print("Record not found")
+				else:
+					# there was no overflow block to check
+					print("Record not found")
 			# just print it? record should probably have some sort of pretty print function
 			print(theRecord.bytes)
 		

@@ -9,9 +9,9 @@ for i in range(50, 90):
 
 
 for i in range(60, 70):
-	file.update(i, str(i) + "th UPDATED record")
+	file.search(i)
 	
-file.update(88, "i'm sure this wont break")
+file.search(88)
 
 
 # lst = [12,34,200,255]
