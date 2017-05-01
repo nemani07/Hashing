@@ -4,12 +4,13 @@ import math
 
 class LinearlyHashedFile:
 	
-	def __init__(self, blockSize, recordSize, fieldSize, fileLoc):
+	def __init__(self, blockSize, recordSize, fieldSize, fileLoc, strKeys):
 		self.m = 1
 		self.n = 0
 		self.file = fileLoc
 		self.overflow = fileLoc + "_overflow"
 		self.blockSize = blockSize
+		self.strKeys = strKeys
 		# record size supplied by user should include the hash field size
 		# 1 is added for the deletion marker
 		# or maybe not, because if a use submits a record size, that should be the record size
@@ -33,14 +34,28 @@ class LinearlyHashedFile:
 	def h2(self, value):
 		return value % (2*self.m)
 	
+	def formatValue(self, value):
+		if type(value) is int:
+			return value
+		elif type(value) is str:
+			return self.sumChars(value)
+			
+	def sumChars(self, string):
+		sum = 0
+		for c in string:
+			sum += ord(c)
+		return sum
+	
 	def insert(self, value, record):
+		# used to accept strings
+		intValue = self.formatValue(value)
 		# pass value to first hash function
-		bucket = self.h1(value)
+		bucket = self.h1(intValue)
 		# check to see if the secondary hash function needs to be used
 		if bucket < self.n:
-			bucket = self.h2(value)
+			bucket = self.h2(intValue)
 		# format the record to be inserted
-		formattedRecord = Record.new(self.recordSize, self.fieldSize, value, record)
+		formattedRecord = Record.new(self.recordSize, self.fieldSize, self.strKeys, value, record)
 		# open the file as binary read and write
 		with open(self.file, 'r+b', buffering=self.blockSize) as f:
 			# navigate to the appropriate bucket
@@ -136,7 +151,7 @@ class LinearlyHashedFile:
 				grabbedBucketCount = 0
 				for record in allRecords:
 					# use second hash function to deterimine which bucket
-					whichBucket = self.h2(record.getHashValue())
+					whichBucket = self.h2(record.getHashValueInt())
 					if whichBucket == self.n:
 						origBucketCount += 1
 						if origBucketCount > self.bfr:
@@ -168,11 +183,13 @@ class LinearlyHashedFile:
 					self.m = 2*self.m
 					
 	def search(self, value):
+		# used for accepting strings
+		intValue = self.formatValue(value)
 		# pass value to first hash function
-		bucket = self.h1(value)
+		bucket = self.h1(intValue)
 		# check to see if the secondary hash function needs to be used
 		if bucket < self.n:
-			bucket = self.h2(value)
+			bucket = self.h2(intValue)
 		# open the file as binary read and write
 		with open(self.file, 'rb', buffering=self.blockSize) as f:
 			# navigate to the appropriate bucket
@@ -205,13 +222,15 @@ class LinearlyHashedFile:
 			theRecord.prettyPrint()
 		
 	def update(self, value, data):
+		# used for accepting strings
+		intValue = self.formatValue(value)
 		# pass value to first hash function
-		bucket = self.h1(value)
+		bucket = self.h1(intValue)
 		# check to see if the secondary hash function needs to be used
 		if bucket < self.n:
-			bucket = self.h2(value)
+			bucket = self.h2(intValue)
 		# format the record to overwrite with
-		formattedRecord = Record.new(self.recordSize, self.fieldSize, value, data)
+		formattedRecord = Record.new(self.recordSize, self.fieldSize, self.strKeys, value, data)
 		# open the file as binary read and write
 		with open(self.file, 'r+b', buffering=self.blockSize) as f:
 			# navigate to the appropriate bucket
@@ -247,11 +266,13 @@ class LinearlyHashedFile:
 			f.write(formattedRecord.bytes)
 			
 	def delete(self, value):
+		# used for accepting strings
+		intValue = self.formatValue(value)
 		# pass value to first hash function
-		bucket = self.h1(value)
+		bucket = self.h1(intValue)
 		# check to see if the secondary hash function needs to be used
 		if bucket < self.n:
-			bucket = self.h2(value)
+			bucket = self.h2(intValue)
 		# open the file as binary read and write
 		with open(self.file, 'r+b', buffering=self.blockSize) as f:
 			# navigate to the appropriate bucket
@@ -287,11 +308,13 @@ class LinearlyHashedFile:
 			f.write(b'\x01')
 	
 	def undelete(self, value):
+		# used for accepting strings
+		intValue = self.formatValue(value)
 		# pass value to first hash function
-		bucket = self.h1(value)
+		bucket = self.h1(intValue)
 		# check to see if the secondary hash function needs to be used
 		if bucket < self.n:
-			bucket = self.h2(value)
+			bucket = self.h2(intValue)
 		# open the file as binary read and write
 		with open(self.file, 'r+b', buffering=self.blockSize) as f:
 			# navigate to the appropriate bucket
@@ -377,4 +400,4 @@ class LinearlyHashedFile:
 			self.displayBlock(blockNum)
 		
 	def makeBlock(self, data):
-		return LinearBlock(self.blockSize, self.blockPointerSize, self.recordSize, self.fieldSize, self.bfr, data)
+		return LinearBlock(self.blockSize, self.blockPointerSize, self.recordSize, self.fieldSize, self.bfr, self.strKeys, data)

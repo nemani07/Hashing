@@ -1,18 +1,29 @@
 class Record: 
 	
-	def __init__(self, size, fieldSize, bytes):
+	def __init__(self, size, fieldSize, strKeys, bytes):
 		self.size = size
 		self.fieldSize = fieldSize
 		self.bytes = bytes
+		self.strKeys = strKeys
 		#print(bytes)
 	
 	@classmethod
-	def new(cls, size, fieldSize, value, record):
-		bytes = value.to_bytes(fieldSize, byteorder='big') + b'\x00' + record.encode('UTF-8')
+	def new(cls, size, fieldSize, strKeys, value, record):
+		if type(value) is int:
+			bytes = value.to_bytes(fieldSize, byteorder='big') + b'\x00' + record.encode('UTF-8')
+		elif type(value) is str:
+			bytes = value.encode('UTF-8') + b'\x00' + record.encode('UTF-8')
 		bytes = bytes + bytearray(size - len(bytes))
-		return cls(size, fieldSize, bytes)
+		return cls(size, fieldSize, strKeys, bytes)
 	
 	def getHashValue(self):
+		if not self.isDeleted():
+			if self.strKeys:
+				return self.bytes[0:self.fieldSize]
+			else:
+				return int.from_bytes(self.bytes[0:self.fieldSize], byteorder='big')
+	
+	def getHashValueInt(self):
 		if not self.isDeleted():
 			return int.from_bytes(self.bytes[0:self.fieldSize], byteorder='big')
 	
