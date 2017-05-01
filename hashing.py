@@ -2,16 +2,28 @@ from LinearlyHashedFile import *
 
 file = LinearlyHashedFile(256, 100, 10, 'C:/RF/test1')
 
+# hashValue = input("Enter a hash value: ")
+# recordValue = input("Enter a string to store with that hash value: ")
 
-for i in range(50, 90):
+# file.insert(int(hashValue), recordValue)
+
+
+
+for i in range(50, 500):
 	print("n: " + str(file.n) + "   m: " + str(file.m))
-	file.insert(i, str(i) + "th record")
+	file.insert(i, str(i) + "th record3333")
 
 
 for i in range(60, 70):
 	file.search(i)
+	file.delete(i)
+	file.search(i)
+	file.undelete(i)
+	file.search(i)
+	print(" ")
+
 	
-file.search(88)
+file.display(False)
 
 
 # lst = [12,34,200,255]

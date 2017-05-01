@@ -1,5 +1,5 @@
 from Record import *
-from Block import *
+from LinearBlock import *
 import math
 
 class LinearlyHashedFile:
@@ -12,7 +12,10 @@ class LinearlyHashedFile:
 		self.blockSize = blockSize
 		# record size supplied by user should include the hash field size
 		# 1 is added for the deletion marker
-		self.recordSize = recordSize + 1
+		# or maybe not, because if a use submits a record size, that should be the record size
+		# we should just notify the user that the available space for data is 
+		# record size - (fieldSize + 1) and plus one is for deletion marker.
+		self.recordSize = recordSize
 		self.fieldSize = fieldSize
 		self.blockPointerSize = 4
 		self.bfr = math.floor((blockSize-self.blockPointerSize)/self.recordSize)
@@ -51,7 +54,6 @@ class LinearlyHashedFile:
 				f.seek(self.blockSize*(bucket+2) + self.recordSize*space)
 				# slot data in there boiii
 				f.write(formattedRecord.bytes)
-				
 			else:
 				# there has been a collision. handle it.
 				print("need a split yoooooo.  " +  str(formattedRecord.getHashValue()) + " did it.")
@@ -195,11 +197,12 @@ class LinearlyHashedFile:
 							theRecord = ofBlock.getRecordWithValue(value)
 						else:
 							print("Record not found")
+							return
 				else:
 					# there was no overflow block to check
 					print("Record not found")
-			# just print it? record should probably have some sort of pretty print function
-			print(theRecord.bytes)
+					return
+			theRecord.prettyPrint()
 		
 	def update(self, value, data):
 		# pass value to first hash function
@@ -217,12 +220,161 @@ class LinearlyHashedFile:
 			# load bucket into memory
 			theBlock = self.makeBlock(f.read(self.blockSize))
 			# currently only built to handle key values
-			recLoc = theBlock.getRecordWithValueLoc(value)
+			if theBlock.containsRecordWithValue(value):
+				# get record location
+				recLoc = theBlock.getRecordWithValueLoc(value)
+			else:
+				# record was not in main file
+				# get pointer to overflow bucket
+				pointer = theBlock.getPointer() - 1
+				if pointer >= 0:
+					# there is an overflow block to check
+					with open(self.overflow, 'rb', buffering=self.blockSize) as overflow:
+						overflow.seek(self.blockSize*pointer)
+						ofBlock = self.makeBlock(overflow.read(self.blockSize))
+						if ofBlock.containsRecordWithValue(value):
+							recLoc = ofBlock.getRecordWithValueLoc(value)
+						else:
+							print("Record not found")
+							return
+				else:
+					# there was no overflow block to check
+					print("Record not found")
+					return
 			# navigate to the record to be updated
 			f.seek(self.blockSize*(bucket+2) + self.recordSize*recLoc)
 			# write over the old record with new formatted one
 			f.write(formattedRecord.bytes)
 			
+	def delete(self, value):
+		# pass value to first hash function
+		bucket = self.h1(value)
+		# check to see if the secondary hash function needs to be used
+		if bucket < self.n:
+			bucket = self.h2(value)
+		# open the file as binary read and write
+		with open(self.file, 'r+b', buffering=self.blockSize) as f:
+			# navigate to the appropriate bucket
+			# plus 2 is to account for the header
+			f.seek(self.blockSize*(bucket+2))
+			# load bucket into memory
+			theBlock = self.makeBlock(f.read(self.blockSize))
+			# currently only built to handle key values
+			if theBlock.containsRecordWithValue(value):
+				# get record location
+				recLoc = theBlock.getRecordWithValueLoc(value)
+			else:
+				# record was not in main file
+				# get pointer to overflow bucket
+				pointer = theBlock.getPointer() - 1
+				if pointer >= 0:
+					# there is an overflow block to check
+					with open(self.overflow, 'rb', buffering=self.blockSize) as overflow:
+						overflow.seek(self.blockSize*pointer)
+						ofBlock = self.makeBlock(overflow.read(self.blockSize))
+						if ofBlock.containsRecordWithValue(value):
+							recLoc = ofBlock.getRecordWithValueLoc(value)
+						else:
+							print("Record not found")
+							return
+				else:
+					# there was no overflow block to check
+					print("Record not found")
+					return
+			# navigate to the record to be updated
+			f.seek(self.blockSize*(bucket+2) + self.recordSize*recLoc + self.fieldSize)
+			# set the deletion bit to 1
+			f.write(b'\x01')
 	
+	def undelete(self, value):
+		# pass value to first hash function
+		bucket = self.h1(value)
+		# check to see if the secondary hash function needs to be used
+		if bucket < self.n:
+			bucket = self.h2(value)
+		# open the file as binary read and write
+		with open(self.file, 'r+b', buffering=self.blockSize) as f:
+			# navigate to the appropriate bucket
+			# plus 2 is to account for the header
+			f.seek(self.blockSize*(bucket+2))
+			# load bucket into memory
+			theBlock = self.makeBlock(f.read(self.blockSize))
+			# currently only built to handle key values
+			if theBlock.containsRecordWithValueInclDeleted(value):
+				# get record location
+				recLoc = theBlock.getRecordWithValueLocInclDeleted(value)
+			else:
+				# record was not in main file
+				# get pointer to overflow bucket
+				pointer = theBlock.getPointer() - 1
+				if pointer >= 0:
+					# there is an overflow block to check
+					with open(self.overflow, 'rb', buffering=self.blockSize) as overflow:
+						overflow.seek(self.blockSize*pointer)
+						ofBlock = self.makeBlock(overflow.read(self.blockSize))
+						if ofBlock.containsRecordWithValueInclDeleted(value):
+							recLoc = ofBlock.getRecordWithValueLocInclDeleted(value)
+						else:
+							print("Record not found")
+							return
+				else:
+					# there was no overflow block to check
+					print("Record not found")
+					return
+			# navigate to the record to be updated
+			f.seek(self.blockSize*(bucket+2) + self.recordSize*recLoc + self.fieldSize)
+			# set the deletion bit to 0
+			f.write(b'\x00')
+	
+	def displayHeader(self):
+		print("header")
+	
+	def displayBlock(self, blockNum):
+		with open(self.file, 'rb', buffering=self.blockSize) as f:
+			# navigate to the given bucket
+			# plus 2 to account for header
+			f.seek(self.blockSize*(blockNum+2))
+			# load bucket into memory
+			theBlock = self.makeBlock(f.read(self.blockSize))
+			# dictionary with record location and record objects
+			records = theBlock.getAllRecordsWithLoc()
+			# line number of the number for the bucket (centered)
+			labelLoc = self.bfr + 1
+			# counter for lines written, will be used to insert labelLoc at right time
+			linesWritten = 0
+			tabSize = 5;
+			# loop through all possible locations
+			for i in range(0, self.bfr):
+				self.printTabOrBucketNum(tabSize, linesWritten, labelLoc, blockNum)
+				print("-" * (1 + self.recordSize + 1))
+				linesWritten+=1
+				if i in records.keys():
+					value = records[i].getHashValue()
+					data = records[i].getData().decode()
+					self.printTabOrBucketNum(tabSize, linesWritten, labelLoc, blockNum)
+					print("|" + str(value) + " "*(self.fieldSize-len(str(value))) + "|" + data + " "*(self.recordSize-(self.fieldSize + len(data) + 1)) + "|")
+					linesWritten+=1
+				else:
+					self.printTabOrBucketNum(tabSize, linesWritten, labelLoc, blockNum)
+					print("|" + " "*(self.fieldSize) + "|" + " "*(self.recordSize-(self.fieldSize + 1)) + "|")
+					linesWritten+=1
+			print(" "*tabSize + "-" * (1 + self.recordSize + 1))
+			
+	def printTabOrBucketNum(self, tabSize, linesWritten, labelLoc, blockNum):
+		if(linesWritten == labelLoc - 1):
+			print(" "*math.ceil((tabSize-len(str(blockNum)))/2) + str(blockNum) + " "*math.floor((tabSize-len(str(blockNum)))/2), end="")
+		else:
+			print(" "*tabSize, end="")
+	
+	def display(self, withHeader):
+		if withHeader:
+			self.displayHeader()
+		with open(self.file, 'rb', buffering=self.blockSize) as f:
+			f.seek(0, 2)
+			numBytes = f.tell()
+		numBlocks = math.ceil(numBytes/self.blockSize)
+		for blockNum in range(0, numBlocks-2):
+			self.displayBlock(blockNum)
+		
 	def makeBlock(self, data):
-		return Block(self.blockSize, self.blockPointerSize, self.recordSize, self.fieldSize, self.bfr, data)
+		return LinearBlock(self.blockSize, self.blockPointerSize, self.recordSize, self.fieldSize, self.bfr, data)
