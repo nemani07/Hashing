@@ -1,10 +1,10 @@
 from StaticlyHashedFile import *
 file=StaticlyHashedFile(256,100,'C:/LN/test1')
 
-file.insert(51, "first record")
-file.insert(52,"second record")
-file.insert(53,"third record")
+file.formatValue("a string")
 
+file.insert("test", "test val")
+file.search("test")
 
 
 
