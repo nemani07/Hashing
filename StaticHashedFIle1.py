@@ -5,16 +5,15 @@ import math
 class StaticlyHashedFile:
 
 	def __init__(self,blockSize, recordSize, fileLoc):
-	         self.m=1
-			 	self.m = m
-    self.slots = [None] * self.m
-			 
-		  self.file=fileLoc		 
+	        self.file=fileLoc		 
 		self.blockSize= blockSize
 		self.fieldSize=fieldSize
 		self.recordSize=recordSize
-		self.blockPointerSize= 4
-		self.bfr= math.floor((blockSize-self.blockPointerSize)/self.recordSize)
+		self.numOfblocks=256
+	#if there is any space in the block when colission occurs
+	        numOfBlocksare=[]
+		#self.blockPointerSize= 4
+		self.bfr= math.floor((self.blockSize)/self.recordSize)
 		 with open(self.file, 'wb') as f:
 			f.write(b"This is a shorter less ridiculous file header")
 			f.seek(self.blockSize*2)
@@ -22,7 +21,7 @@ class StaticlyHashedFile:
 		
 	#hash function:
 	 def hash_function(self, value):
-    i = value % self.m
+    i = value % self.numOfblocks
     return i
 	
 	#hash insert:
@@ -33,38 +32,22 @@ class StaticlyHashedFile:
     orig = slot
 	#original logic
     while True:
-        if self.slots[slot] is None:
-            self.slots[slot] = value
+        if self.numOfBlocksare[slot] is None:
+            self.numOfBlocksare[slot] = 1
             return slot
-        if self.slots[slot] =  value:
-            return -2
-        slot = (slot + 1) % self.m
-        if slot == orig:
-            return -1
-			#original logic ends
-			
-			#ray logic
-			# open the file as binary read and write
-		with open(self.file, 'r+b', buffering=self.blockSize) as f:
-			# navigate to the appropriate bucket
-			# plus 2 is to account for the header
-			f.seek(self.blockSize*(slot+2))
-			# check to see if data exists in this bucket
-			theBlock = self.makeBlock(f.read(self.blockSize))
-			space = theBlock.hasSpace()
-			if space>=0:
-			#INEEDTOASKABOUTTHIS
-				# spot was open, move pointer back
-				f.seek(self.blockSize*(slot+2) + self.recordSize*space)
-				else:
-				# there has been a collision. handle it by searching on to the next available value.
-				#navigate to the next available block
-				f.seek((self.blockSize*space)+i) %self.m
-				#I"M NOT SURE WHAT TO PUT IN THE PLACE OF M
-			
-				
-				
-			
+			else:
+			 if (self.numOfBlocksare[slot] +1) > self.bfr:
+	 			slot = (slot + 1) % self.numOfblocks
+				if slot == orig:
+					return -1
+			else:
+				self.numOfBlocksare[slot] = self.numOfBlocksare[slot] + 1
+				return slot
+
+			#which block it should get into
+	
+	
+	
 				# original logic
 				def search(self, value)
                 hsh = self.hash_function(value)
